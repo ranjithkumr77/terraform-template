@@ -1,0 +1,74 @@
+# Configure AWS credentials
+provider "aws" {
+  region = "us-east-1"  # Replace with your desired region
+  access_key = "xxx"
+  secret_key = "xxx"
+}
+
+# Create a default VPC if it doesn't exist
+resource "aws_vpc" "default" {
+  cidr_block = "10.0.0.0/16"  
+  tags = {
+    Name = "Default VPC"
+  }
+}
+
+# Create a default internet gateway
+resource "aws_internet_gateway" "default" {
+  vpc_id = aws_vpc.default.id
+}
+
+# Create a default subnet
+resource "aws_subnet" "default" {
+  vpc_id = aws_vpc.default.id
+  cidr_block = "10.0.0.0/24" 
+  availability_zone = "us-east-1a"  
+}
+
+# Create a route table and associate it with the default subnet
+resource "aws_route_table" "default" {
+  vpc_id = aws_vpc.default.id
+}
+
+resource "aws_route" "default" {
+  route_table_id = aws_route_table.default.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id = aws_internet_gateway.default.id
+}
+
+resource "aws_route_table_association" "default" {
+  subnet_id = aws_subnet.default.id
+  route_table_id = aws_route_table.default.id
+}
+
+# Create a security group with necessary rules
+resource "aws_security_group" "default" {
+  name = "Default Security Group"
+  description = "Default security group for EC2 instances"
+  vpc_id = aws_vpc.default.id
+
+  ingress {
+    from_port = 0
+    to_port = 0
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Create an EC2 instance in the default subnet
+resource "aws_instance" "default" {
+  ami = "ami-0e86e20dae9224db8"  
+  instance_type = "t2.micro"  
+  subnet_id = aws_subnet.default.id
+  security_groups = [aws_security_group.default.id]
+  tags = {
+    Name = "Default EC2 Instance"
+  }
+}
